@@ -1,6 +1,8 @@
 # haramG.blog
 블로그 히스토리 작성 — 직접 경험한 콘텐츠를 쌓아두고, 나눠서 발행하고, 놓치지 않게 관리하는 저장소입니다.
 
+**대시보드: https://claude.ai/artifact/ViBnwgdwxuudHTy5LD3hp3** (본인만 열람 가능)
+
 ## 운영 방침
 
 | 플랫폼 | 올리는 글 | 비고 |
@@ -31,7 +33,7 @@
 | 경험 메모 → 플랫폼별 초안 작성 | 경험 메모 작성 (짧아도 됨) |
 | 말투 가이드 정리, 리서치(출처 포함) | 사진 촬영·첨부 파일 준비 |
 | 발행 일정·백로그 관리, 이슈 알림 | 초안 검토 후 **블로그에 붙여넣고 발행** |
-| 개발 글용 도표·다이어그램 | 발행 후 `status`, `published`, URL 기록 |
+| 개발 글용 도표·다이어그램 | 발행 후 대시보드에서 **발행 체크** |
 
 ### 자동 업로드가 안 되는 이유
 
@@ -41,36 +43,42 @@
 ## 구조
 
 ```
-content/
-  food/   맛집·추천
-  dev/    개발 공부
-  ai/     AI 활용기
-templates/  카테고리별 글 템플릿 (frontmatter 포함)
+dashboard/index.html   대시보드 페이지 소스 (claude.ai Artifact로 게시)
+prompts/blog-writing.md  글 작성 프롬프트 = 요구사항 체크리스트 (매번 먼저 읽음)
 guides/
-  style-guide.md      말투 가이드
+  style-guide.md      말투 가이드 (네이버 글 5편 분석)
   platform-formats.md 네이버 / 티스토리 포맷 차이와 발행 규칙
-images/     글에 들어갈 사진
-scripts/backlog.py  현황 리포트 · 시즌 알림 계산
+content/{food,dev,ai}/ 대시보드 DB의 사본 (sync_dashboard.py가 생성, 직접 수정 X)
+templates/  카테고리별 메모 항목 참고용
+scripts/
+  backlog.py          현황 리포트 · 시즌 알림 계산 (content/ 기준)
+  sync_dashboard.py   대시보드 DB → content/ 동기화
 .github/workflows/blog-alerts.yml  GitHub 이슈 알림
 ```
 
 ## 사용 흐름
 
-1. 경험하면 `templates/<카테고리>.md`를 복사해 `content/<카테고리>/날짜-이름.md`로 저장하고 **경험 메모**만 채웁니다.
-2. Claude에게 초안 작성을 요청 → `status: draft` → 검토 후 `ready`.
-3. 발행 날짜를 정하면 `planned`에 입력합니다. 한 주에 경험이 많으면 다음 주, 다다음 주로 나눠 날짜를 넣습니다.
-4. 올린 뒤 `status: published`, `published`, `naver_url`(티스토리면 `tistory_url`)을 채웁니다.
+```
+① 대시보드에 경험 메모 올리기 (대충 써도 됨, 사진 첨부 가능)
+② 채팅에서 "대시보드 확인해줘"
+   Claude: 프롬프트 확인 → 콘텐츠 글 확인 → 콘텐츠 글 작성
+   (사실이 부족하면 쓰지 않고 질문을 남김 → 메모에 답하고 다시 요청)
+③ 대시보드에서 초안 복사 → 네이버(개발 글은 티스토리도)에 붙여넣고 발행
+④ 대시보드에서 "네이버 발행" / "티스토리 발행" 체크 (날짜 자동 기록)
+```
 
-시즌 콘텐츠는 `season: true`, `season_end: YYYY-MM-DD`를 넣으면 우선순위가 올라가고 알림 대상이 됩니다.
+- 블로그 URL은 기록하지 않습니다. Claude가 네이버 페이지에 접속할 수 없어 쓸 일이 없습니다.
+- 발행 예정일과 시즌 마감일은 대시보드에서 입력합니다. 시즌 글은 마감 14일 전부터 "챙길 것"에 뜹니다.
 
-### 상태값
+### 대시보드 단계
 
-| status | 의미 |
+| 단계 | 의미 |
 |---|---|
-| idea | 경험만 하고 메모 전 |
-| draft | 초안 작성됨 |
-| ready | 검토 끝, 발행 대기 |
-| published | 발행 완료 (네이버 기준) |
+| 메모 전 | 경험만 등록 |
+| 다듬기 요청 | Claude 작업 대기 |
+| 질문 확인 | Claude가 사실 확인 질문을 남김 |
+| 초안 완료 | 복사해서 올리면 됨 |
+| 발행 완료 | 네이버 발행 체크됨 |
 
 ## GitHub 이슈 알림
 
@@ -82,7 +90,7 @@ scripts/backlog.py  현황 리포트 · 시즌 알림 계산
 - 예약 실행은 **main 브랜치에 있는 워크플로만** 동작합니다.
 - Actions 탭 → Blog alerts → Run workflow 로 즉시 실행할 수 있습니다.
 - 알림을 받으려면 저장소 Watch 설정에서 Issues 알림을 켜두세요.
-- 주간 리포트는 현재 네이버 발행(`status`) 기준입니다. 티스토리 발행 여부는 `tistory_url`로만 기록됩니다.
+- 이슈 알림은 저장소의 `content/`를 읽습니다. 대시보드에서 체크한 내용은 **Claude가 다음에 작업할 때 동기화**하므로, 그 사이에는 알림이 하루 정도 늦거나 이미 올린 글에 알림이 갈 수 있습니다. 대시보드의 "챙길 것"은 항상 최신입니다.
 
 ### 로컬에서 확인
 
@@ -105,6 +113,7 @@ python3 scripts/backlog.py alerts --days 14  # 시즌 알림 대상
 
 - [x] 기존 네이버 글 5편 전달 → 말투 가이드 작성 (`guides/style-guide.md`)
 - [x] 공부 언어 확인: 파이썬 (if문 → for문 발행, 다음 편 break/continue)
-- [ ] break/continue 공부 메모 전달 → 네이버형 / 티스토리형 2편 작성
+- [x] 대시보드 + 작성 프롬프트 구성
+- [ ] break/continue 공부 메모를 대시보드에 올리기 → 네이버형 / 티스토리형 2편 작성
 - [ ] 티스토리 계정 개설
 - [ ] (선택) 매주 AI 도구 후보 목록을 이슈로 받는 예약 작업 설정
