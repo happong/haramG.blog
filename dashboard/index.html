@@ -358,6 +358,8 @@ function renderPosts() {
     const open = S.open === p.id;
     const sig = open ? `${S.confirmDel === p.id}|${S.draftTab[p.id] || ""}` : "";
     const prev = S.rows.get(p.id);
+    const typing = open && prev && prev.open && prev.sig === sig && prev.node.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (typing) { next.set(p.id, prev); return prev.node; }
     const node = (prev && prev.data === p._raw && prev.open === open && prev.sig === sig) ? prev.node : buildPost(p, open);
     next.set(p.id, { data: p._raw, open, sig, node });
     return node;
@@ -392,7 +394,31 @@ function buildPost(p, open) {
 }
 
 function fieldVal(p, k) { const e = S.edits[p.id]; return e && k in e ? e[k] : p[k]; }
-function setEdit(p, k, v) { (S.edits[p.id] ||= {})[k] = v; }
+function setEdit(p, k, v) { (S.edits[p.id] ||= {})[k] = v; setSaveStatus(p.id, "입력 중…"); scheduleAutosave(p.id); }
+
+// ---------- 자동 저장 ----------
+// 입력을 멈추고 1초가 지나면 저장한다. 화면을 나가거나 앱을 전환할 때도 바로 저장한다.
+const autoTimers = {};
+function scheduleAutosave(id) { clearTimeout(autoTimers[id]); autoTimers[id] = setTimeout(() => autosave(id), 1000); }
+function setSaveStatus(id, text) { const n = document.getElementById(`save-${id}`); if (n) n.textContent = text; }
+async function autosave(id, extra = {}) {
+  clearTimeout(autoTimers[id]); delete autoTimers[id];
+  const pending = { ...(S.edits[id] || {}) };
+  if (!Object.keys(pending).length && !Object.keys(extra).length) return;
+  const patch = { ...cleanFields(pending), ...extra, updatedAt: new Date().toISOString() };
+  setSaveStatus(id, "저장 중…");
+  try {
+    await queueWrite(id, () => S.db.collection("posts").doc(id).update(patch));
+    const cur = S.edits[id] || {};
+    for (const k of Object.keys(pending)) if (cur[k] === pending[k]) delete cur[k];
+    setSaveStatus(id, "자동 저장됨 ✓");
+    return true;
+  } catch (e) { setSaveStatus(id, "저장 실패 — 다시 입력하거나 저장 버튼을 눌러주세요"); toast(dbErr(e)); return false; }
+}
+function flushAutosaves() { for (const id of Object.keys(autoTimers)) autosave(id); }
+document.addEventListener("visibilitychange", () => { if (document.hidden) flushAutosaves(); });
+window.addEventListener("pagehide", flushAutosaves);
+window.addEventListener("beforeunload", e => { if (Object.keys(autoTimers).length) { flushAutosaves(); e.preventDefault(); e.returnValue = ""; } });
 
 function formFields(get, set, idp, exceptId, onTitle) {
   const inp = (k, label, type = "text", extra = {}) => el("label", { class: "field" + (extra.wide ? " wide" : "") }, label,
@@ -435,7 +461,7 @@ function buildDetail(p) {
 
   if (p.questions && p.stage === "question") kids.push(el("div", { class: "box q" },
     el("h3", { text: "Claude가 확인하고 싶은 것" }), el("p", { text: p.questions }),
-    el("p", { class: "muted", style: "font-size:13px", text: "답은 경험 메모 아래에 이어서 적고 '저장하고 다듬기 요청'을 눌러주세요." })));
+    el("p", { class: "muted", style: "font-size:13px", text: "답은 경험 메모 아래에 이어서 적고 '다듬기 요청'을 눌러주세요." })));
 
   if (p.photoNotes) kids.push(el("div", { class: "box", style: "background:var(--bg);border:1px solid var(--line)" },
     el("h3", { text: "사진 배치 안내 (Claude)" }), el("p", { text: p.photoNotes }),
@@ -472,8 +498,8 @@ function buildDetail(p) {
   }
 
   const actions = el("div", { class: "actions" },
-    el("button", { type: "button", class: "btn primary", onclick: () => savePost(p, true) }, "저장하고 다듬기 요청"),
-    el("button", { type: "button", class: "btn", onclick: () => savePost(p, false) }, "저장만"),
+    el("button", { type: "button", class: "btn primary", onclick: () => savePost(p, true) }, "다듬기 요청"),
+    el("span", { class: "muted", id: `save-${p.id}`, style: "font-size:13px", text: Object.keys(S.edits[p.id] || {}).length ? "저장 안 된 변경 있음" : "입력하면 자동 저장돼요" }),
     el("span", { class: "spacer" }),
     S.confirmDel === p.id
       ? el("span", { class: "confirm" }, "정말 지울까요?", el("button", { type: "button", class: "btn small danger", onclick: () => deletePost(p) }, "지우기"), el("button", { type: "button", class: "btn small", onclick: () => { S.confirmDel = null; renderPosts(); } }, "취소"))
@@ -599,14 +625,9 @@ function cleanFields(o) {
 }
 
 async function savePost(p, request) {
-  const patch = cleanFields(S.edits[p.id] || {});
-  if (request) { patch.stage = "memo"; }
-  patch.updatedAt = new Date().toISOString();
-  try {
-    await queueWrite(p.id, () => S.db.collection("posts").doc(p.id).update(patch));
-    delete S.edits[p.id];
-    toast(request ? "저장했어요. Claude에게 다듬기를 요청해두었어요." : "저장했어요.");
-  } catch (e) { toast(dbErr(e)); }
+  const ok = await autosave(p.id, request ? { stage: "memo" } : {});
+  if (ok === false) return;
+  toast(request ? "저장했어요. Claude에게 다듬기를 요청해두었어요." : "저장했어요.");
 }
 
 async function toggleDone(p, which, box) {
@@ -764,6 +785,7 @@ function syncSegs() {
 document.getElementById("segState").addEventListener("click", e => { const v = e.target.closest("button")?.dataset.v; if (!v) return; S.filter = v; syncSegs(); renderPosts(); });
 document.getElementById("segCat").addEventListener("click", e => { const v = e.target.closest("button")?.dataset.v; if (!v) return; S.cat = v; syncSegs(); renderPosts(); });
 document.getElementById("newBtn").addEventListener("click", openNew);
+document.getElementById("posts").addEventListener("focusout", () => setTimeout(() => { if (!document.getElementById("posts").contains(document.activeElement)) renderPosts(); }, 0));
 
 function renderAll() { renderQuota(); renderPlanner(); renderTodo(); renderPosts(); }
 renderQuota(); renderPlanner();
