@@ -15,6 +15,7 @@
   --food: #C7572A;
   --dev: #0F7C77;
   --ai: #6A4FCB;
+  --life: #5B6B82;
   --warn: #A86A12;
   --danger: #B83B32;
   --ok: #2E7D4F;
@@ -25,13 +26,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12141B; --surface: #1B1E28; --ink: #E8EAF1; --muted: #A1A7B8; --line: #2C3040;
-    --accent: #EE7BA6; --food: #F08A5D; --dev: #4CC2B9; --ai: #A895F5; --warn: #E3B04B; --danger: #F07A6E; --ok: #6BC793;
+    --accent: #EE7BA6; --food: #F08A5D; --dev: #4CC2B9; --ai: #A895F5; --life: #9AAAC2; --warn: #E3B04B; --danger: #F07A6E; --ok: #6BC793;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12141B; --surface: #1B1E28; --ink: #E8EAF1; --muted: #A1A7B8; --line: #2C3040;
-  --accent: #EE7BA6; --food: #F08A5D; --dev: #4CC2B9; --ai: #A895F5; --warn: #E3B04B; --danger: #F07A6E; --ok: #6BC793;
+  --accent: #EE7BA6; --food: #F08A5D; --dev: #4CC2B9; --ai: #A895F5; --life: #9AAAC2; --warn: #E3B04B; --danger: #F07A6E; --ok: #6BC793;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -109,6 +110,7 @@ header.top p { margin: 4px 0 0; }
 .field.span2 { grid-column: span 2; }
 @media (max-width: 420px) { .field.span2 { grid-column: 1 / -1; } }
 .field input, .field select, .field textarea { color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font-size: 14.5px; width: 100%; }
+.field input[type="checkbox"] { width: auto; }
 .field textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
 .inline { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; }
 .box { border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; }
@@ -126,6 +128,24 @@ header.top p { margin: 4px 0 0; }
 .actions .spacer { flex: 1; }
 .confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--danger); }
 
+.dupbox { background: color-mix(in srgb, var(--warn) 11%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; display: grid; gap: 4px; }
+.dupbox b { color: var(--warn); }
+.dupbox ul { margin: 0; padding-left: 18px; }
+.md { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 18px 14px; max-height: 560px; overflow: auto; line-height: 1.7; font-size: 14.5px; overflow-wrap: anywhere; }
+.md h1, .md h2, .md h3 { font-family: var(--font-body); font-weight: 600; margin: 18px 0 6px; }
+.md h1 { font-size: 20px; } .md h2 { font-size: 18px; } .md h3 { font-size: 16px; }
+.md p { margin: 8px 0; }
+.md pre { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; white-space: pre; }
+.md code { font-family: var(--font-mono); font-size: .92em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 1px 4px; border-radius: 4px; }
+.md pre code { background: none; padding: 0; }
+.md table { border-collapse: collapse; margin: 8px 0; font-size: 13.5px; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; vertical-align: top; }
+.md .tablewrap { overflow-x: auto; }
+.md blockquote { margin: 8px 0; padding: 4px 12px; border-left: 3px solid var(--accent); color: var(--ink); }
+.md ul, .md ol { padding-left: 22px; margin: 6px 0; }
+.copyline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.copyline .lbl { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.copyline .val { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
 .newform { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 16px; display: grid; gap: 14px; }
 .notice { background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 18px; color: var(--muted); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
@@ -188,6 +208,7 @@ header.top p { margin: 4px 0 0; }
           <button type="button" data-v="food" aria-pressed="false">맛집·추천</button>
           <button type="button" data-v="dev" aria-pressed="false">개발</button>
           <button type="button" data-v="ai" aria-pressed="false">AI</button>
+          <button type="button" data-v="life" aria-pressed="false">일상</button>
         </div>
       </div>
     </div>
@@ -200,6 +221,7 @@ const CAT = {
   food: { label: "맛집·추천", quota: 2, color: "var(--food)" },
   dev:  { label: "개발 공부", quota: 1, color: "var(--dev)" },
   ai:   { label: "AI 활용기", quota: 1, color: "var(--ai)" },
+  life: { label: "일상·기타", quota: 0, color: "var(--life)" },
 };
 const STAGE = {
   idea: "메모 전", memo: "다듬기 요청", question: "질문 확인", draft: "초안 완료", published: "발행 완료",
@@ -260,6 +282,7 @@ function renderQuota() {
   document.getElementById("weekLabel").textContent = `이번 주 ${md(ws)}(월) ~ ${md(we)}(일) · 오늘 ${md(t)}`;
   const box = document.getElementById("quota"); box.replaceChildren();
   for (const [k, c] of Object.entries(CAT)) {
+    if (!c.quota) continue;
     const mine = S.posts.filter(p => catOf(p) === k);
     const done = mine.filter(p => p.naverDone && isDate(p.naverDoneAt) && p.naverDoneAt >= ws && p.naverDoneAt <= we).length;
     const plan = mine.filter(p => !p.naverDone && isDate(p.planned) && p.planned >= ws && p.planned <= we).length;
@@ -353,6 +376,7 @@ function buildPost(p, open) {
     d !== null && !p.naverDone ? el("span", { class: "season", text: d < 0 ? `시즌 ${-d}일 지남` : `시즌 D-${d}` }) : null,
     isDate(p.visited) ? el("span", { text: `경험 ${md(p.visited)}` }) : null,
     (p.photos || []).length ? el("span", { text: `사진 ${(p.photos || []).length}장` }) : null,
+    similarTitles(p.title, p.id).length ? el("span", { class: "season", text: "비슷한 글 있음" }) : null,
   ];
   const checks = el("div", { class: "checks" },
     el("label", {}, el("input", { type: "checkbox", id: `nv-${p.id}`, checked: !!p.naverDone, onchange: e => toggleDone(p, "naver", e.target) }), "네이버 발행"),
@@ -370,7 +394,7 @@ function buildPost(p, open) {
 function fieldVal(p, k) { const e = S.edits[p.id]; return e && k in e ? e[k] : p[k]; }
 function setEdit(p, k, v) { (S.edits[p.id] ||= {})[k] = v; }
 
-function formFields(get, set, idp) {
+function formFields(get, set, idp, exceptId, onTitle) {
   const inp = (k, label, type = "text", extra = {}) => el("label", { class: "field" + (extra.wide ? " wide" : "") }, label,
     el("input", { type, id: `${idp}-${k}`, value: get(k) ?? "", oninput: e => set(k, e.target.value), placeholder: extra.ph || null }));
   const sel = (k, label, opts) => { const s = el("select", { id: `${idp}-${k}`, onchange: e => set(k, e.target.value) }, opts.map(([v, t]) => el("option", { value: v, text: t }))); s.value = String(get(k) ?? opts[0][0]); return el("label", { class: "field" }, label, s); };
@@ -378,8 +402,14 @@ function formFields(get, set, idp) {
   const seasonBox = el("input", { type: "checkbox", id: `${idp}-season`, checked: seasonOn, onchange: e => { set("season", e.target.checked); endWrap.hidden = !e.target.checked; } });
   const endWrap = inp("seasonEnd", "시즌 마감일 (이 날 전에 올리기)", "date");
   endWrap.hidden = !seasonOn;
+  const dupWrap = el("div", { class: "field wide", "aria-live": "polite" });
+  const refreshDup = () => { const b = dupBox(get("title"), exceptId); dupWrap.replaceChildren(...(b ? [b] : [])); dupWrap.hidden = !b; };
+  const titleField = el("label", { class: "field wide" }, "제목 (블로그에 올릴 제목이나 가게·장소 이름)",
+    el("input", { type: "text", id: `${idp}-title`, value: get("title") ?? "", placeholder: "예: 서현역 햇빛꽃집", oninput: e => { set("title", e.target.value); refreshDup(); onTitle && onTitle(); } }));
+  refreshDup();
   return el("div", { class: "fields" },
-    inp("title", "제목 (가게·장소 이름이나 주제)", "text", { wide: true, ph: "예: 서현역 햇빛꽃집" }),
+    titleField,
+    dupWrap,
     sel("category", "카테고리", Object.entries(CAT).map(([k, c]) => [k, c.label])),
     inp("visited", "경험한 날", "date"),
     inp("planned", "발행 예정일", "date"),
@@ -391,7 +421,7 @@ function formFields(get, set, idp) {
 }
 
 function buildDetail(p) {
-  const kids = [formFields(k => fieldVal(p, k), (k, v) => setEdit(p, k, v), `f-${p.id}`)];
+  const kids = [formFields(k => fieldVal(p, k), (k, v) => setEdit(p, k, v), `f-${p.id}`, p.id)];
 
   // 사진
   const photos = p.photos || [];
@@ -411,15 +441,30 @@ function buildDetail(p) {
   const hasN = !!p.draftNaver, hasT = !!p.draftTistory;
   if (hasN || hasT) {
     const tab = S.draftTab[p.id] || (hasN ? "naver" : "tistory");
-    const text = tab === "naver" ? p.draftNaver : p.draftTistory;
-    const pre = el("pre", { class: "draft", text: text || "아직 없어요." });
-    kids.push(el("div", { class: "drafts" },
-      el("div", { class: "draft-head" },
-        el("div", { class: "seg", role: "group", "aria-label": "초안 플랫폼" },
-          hasN ? el("button", { type: "button", "aria-pressed": tab === "naver" ? "true" : "false", onclick: () => { S.draftTab[p.id] = "naver"; renderPosts(); } }, "네이버 초안") : null,
-          hasT ? el("button", { type: "button", "aria-pressed": tab === "tistory" ? "true" : "false", onclick: () => { S.draftTab[p.id] = "tistory"; renderPosts(); } }, "티스토리 초안") : null),
-        el("button", { type: "button", class: "btn small", onclick: () => copyText(text, pre) }, "초안 복사")),
-      pre));
+    const head = el("div", { class: "seg", role: "group", "aria-label": "초안 플랫폼" },
+      hasN ? el("button", { type: "button", "aria-pressed": tab === "naver" ? "true" : "false", onclick: () => { S.draftTab[p.id] = "naver"; renderPosts(); } }, "네이버 초안") : null,
+      hasT ? el("button", { type: "button", "aria-pressed": tab === "tistory" ? "true" : "false", onclick: () => { S.draftTab[p.id] = "tistory"; renderPosts(); } }, "티스토리 초안") : null);
+    if (tab === "naver") {
+      const pre = el("pre", { class: "draft", text: p.draftNaver || "아직 없어요." });
+      kids.push(el("div", { class: "drafts" },
+        el("div", { class: "draft-head" }, head, el("button", { type: "button", class: "btn small", onclick: () => copyText(p.draftNaver, pre, "네이버 초안을 복사했어요. 블로그 에디터에 붙여넣으세요.") }, "초안 복사")),
+        pre));
+    } else {
+      const parts = splitDraft(p.draftTistory || "");
+      const body = el("div", { class: "md" }); body.innerHTML = mdToHtml(parts.body);
+      const copyLine = (label, val, msg) => {
+        const v = el("span", { class: "val", text: val });
+        return el("div", { class: "copyline" }, el("span", { class: "lbl", text: label }), v, el("button", { type: "button", class: "btn small", onclick: () => copyText(val, v, msg) }, `${label} 복사`));
+      };
+      kids.push(el("div", { class: "drafts" },
+        el("div", { class: "draft-head" }, head,
+          el("span", { class: "actions" },
+            el("button", { type: "button", class: "btn small", onclick: () => copyRich(body.innerHTML, parts.body, body) }, "본문 서식 복사"),
+            el("button", { type: "button", class: "btn small", onclick: () => copyText(parts.body, body, "본문을 마크다운 텍스트로 복사했어요.") }, "본문 텍스트 복사"))),
+        parts.title ? copyLine("제목", parts.title, "제목을 복사했어요.") : null,
+        body,
+        parts.tags ? copyLine("태그", parts.tags, "태그를 복사했어요. 티스토리 태그 칸에 붙여넣으세요.") : null));
+    }
   }
 
   const actions = el("div", { class: "actions" },
@@ -433,10 +478,86 @@ function buildDetail(p) {
   return el("div", { class: "detail" }, kids);
 }
 
-function copyText(text, pre) {
-  const done = () => toast("초안을 복사했어요. 블로그 에디터에 붙여넣으세요.");
-  const fallback = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("복사가 막혀 있어요. 선택된 글을 길게 눌러 복사해주세요."); };
-  try { navigator.clipboard.writeText(text || "").then(done, fallback); } catch { fallback(); }
+function selectNode(node) { try { const r = document.createRange(); r.selectNodeContents(node); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch {} }
+function copyText(text, node, msg) {
+  const fallback = () => { selectNode(node); toast("자동 복사가 막혀 있어요. 선택된 부분을 직접 복사(Ctrl+C, 길게 누르기)해주세요."); };
+  try { navigator.clipboard.writeText(text || "").then(() => toast(msg || "복사했어요."), fallback); } catch { fallback(); }
+}
+function copyRich(html, text, node) {
+  const fallback = () => { selectNode(node); toast("자동 복사가 막혀 있어요. 선택된 본문을 직접 복사(Ctrl+C, 길게 누르기)해주세요."); };
+  try {
+    if (!window.ClipboardItem || !navigator.clipboard?.write) throw new Error("no rich clipboard");
+    navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([html], { type: "text/html" }),
+      "text/plain": new Blob([text], { type: "text/plain" }),
+    })]).then(() => toast("서식 그대로 복사했어요. 티스토리 본문에 붙여넣으세요."), fallback);
+  } catch { fallback(); }
+}
+
+// ---------- 초안 렌더링 (티스토리용 마크다운) ----------
+function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function inl(t) { return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"); }
+const BLOCK = /^(```|#{1,6}\s|\||>|- |\d+\. )/;
+function mdToHtml(src) {
+  const L = String(src).replace(/\r/g, "").split("\n"); const out = []; let i = 0;
+  while (i < L.length) {
+    const l = L[i];
+    if (/^```/.test(l)) { const buf = []; i++; while (i < L.length && !/^```/.test(L[i])) buf.push(L[i++]); i++; out.push(`<pre><code>${esc(buf.join("\n"))}</code></pre>`); continue; }
+    const h = l.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { const n = h[1].length; out.push(`<h${n}>${inl(h[2])}</h${n}>`); i++; continue; }
+    if (/^\|/.test(l)) {
+      const rows = []; while (i < L.length && /^\|/.test(L[i])) rows.push(L[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      let html = "<div class=\"tablewrap\"><table>";
+      rows.forEach((r, k) => { if (k === 1 && /^\|?\s*:?-{2,}/.test(r)) return; const tg = k === 0 ? "th" : "td"; html += "<tr>" + cells(r).map(c => `<${tg}>${inl(c)}</${tg}>`).join("") + "</tr>"; });
+      out.push(html + "</table></div>"); continue;
+    }
+    if (/^>\s?/.test(l)) { const buf = []; while (i < L.length && /^>\s?/.test(L[i])) buf.push(L[i++].replace(/^>\s?/, "")); out.push(`<blockquote>${buf.map(inl).join("<br>")}</blockquote>`); continue; }
+    if (/^- /.test(l)) { const buf = []; while (i < L.length && /^- /.test(L[i])) buf.push(`<li>${inl(L[i++].slice(2))}</li>`); out.push(`<ul>${buf.join("")}</ul>`); continue; }
+    if (/^\d+\. /.test(l)) { const buf = []; while (i < L.length && /^\d+\. /.test(L[i])) buf.push(`<li>${inl(L[i++].replace(/^\d+\. /, ""))}</li>`); out.push(`<ol>${buf.join("")}</ol>`); continue; }
+    if (!l.trim()) { i++; continue; }
+    const buf = []; while (i < L.length && L[i].trim() && !BLOCK.test(L[i])) buf.push(inl(L[i++]));
+    out.push(`<p>${buf.join("<br>")}</p>`);
+  }
+  return out.join("\n");
+}
+// 맨 위 "# 제목" 줄과 맨 아래 "태그:" 줄을 따로 떼어낸다 (티스토리는 제목·태그 칸이 따로 있음)
+function splitDraft(text) {
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  let title = "", tags = "";
+  const first = lines.findIndex(x => x.trim());
+  if (first >= 0 && /^#\s+/.test(lines[first])) { title = lines[first].replace(/^#\s+/, "").trim(); lines.splice(first, 1); }
+  for (let k = lines.length - 1; k >= 0; k--) { if (!lines[k].trim()) continue; if (/^태그\s*:/.test(lines[k])) { tags = lines[k].replace(/^태그\s*:\s*/, "").trim(); lines.splice(k, 1); } break; }
+  return { title, body: lines.join("\n").trim(), tags };
+}
+
+// ---------- 중복 제목 확인 ----------
+const GENERIC = new Set("솔직후기 솔직 후기 후기기 후기기기 내돈내산 추천 맛집 다녀온후기 다녀온 방문 방문후기 feat 이해하기 코스 초보자 축제 여행 주말 가을 동탄 판교 용인 인천 해운대 종로 서현역 나주 담양 목동 호수공원 공부 하기 사람만 있는 이상 완벽한 보낸 시작하는 으로 에서 하는".split(" "));
+const GENERIC_BY_LEN = [...GENERIC].sort((a, b) => b.length - a.length);
+const normT = t => String(t || "").toLowerCase().replace(/[^0-9a-z가-힣]/g, "");
+const tokensT = t => String(t || "").toLowerCase().replace(/\([^)]+\)/g, " ").split(/[^0-9a-z가-힣]+/).filter(w => w.length >= 2 && !GENERIC.has(w) && !/^\d+번$/.test(w));
+function coreT(t) { let c = normT(String(t || "").replace(/\([^)]*\)/g, "")); for (const w of GENERIC_BY_LEN) c = c.split(w).join(""); return c; }
+const bigr = c => { const o = new Set(); for (let i = 0; i < c.length - 1; i++) o.add(c.slice(i, i + 2)); return o; };
+function similarTitles(title, exceptId) {
+  if (!normT(title)) return [];
+  const A = bigr(coreT(title)), na = normT(title), ta = tokensT(title), hits = [];
+  for (const p of S.posts) {
+    if (p.id === exceptId || !p.title) continue;
+    const B = bigr(coreT(p.title)); let inter = 0; A.forEach(x => { if (B.has(x)) inter++; });
+    const dice = A.size && B.size ? 2 * inter / (A.size + B.size) : 0;
+    const nb = normT(p.title);
+    const kw = [...new Set([...ta.filter(w => nb.includes(w)), ...tokensT(p.title).filter(w => na.includes(w))])];
+    if (dice >= 0.5 || kw.length) hits.push({ p, kw });
+  }
+  return hits;
+}
+function dupBox(title, exceptId) {
+  const hits = similarTitles(title, exceptId);
+  if (!hits.length) return null;
+  return el("div", { class: "dupbox", role: "status" },
+    el("b", { text: "비슷한 제목의 글이 이미 있어요" }),
+    el("ul", {}, hits.slice(0, 5).map(h => el("li", { text: `${h.p.title} · ${STAGE[stageOf(h.p)]}${h.kw.length ? ` (겹치는 말: ${h.kw.join(", ")})` : ""}` }))),
+    el("span", { class: "muted", text: "일부러 같은 주제로 쓰는 거라면 그대로 저장해도 돼요." }));
 }
 
 // ---------- 동작 ----------
@@ -528,13 +649,13 @@ const NEW = { data: {}, files: [] };
 function openNew() {
   const sec = document.getElementById("newSection");
   if (!sec.hidden) { sec.hidden = true; return; }
-  NEW.data = { category: "food", priority: "3", visited: todayStr() }; NEW.files = [];
+  NEW.data = { category: "food", priority: "3", visited: todayStr() }; NEW.files = []; NEW.dupAck = false;
   const get = k => NEW.data[k], set = (k, v) => { NEW.data[k] = v; };
   const fileInfo = el("span", { class: "muted", style: "font-size:13px", text: "" });
   const req = el("input", { type: "checkbox", id: "new-request", checked: true });
   sec.replaceChildren(el("form", { class: "newform", onsubmit: e => { e.preventDefault(); createPost(req.checked); } },
     el("h2", { text: "경험 메모 올리기" }),
-    formFields(get, set, "new"),
+    formFields(get, set, "new", null, () => { NEW.dupAck = false; const b = document.getElementById("new-save"); if (b) b.textContent = "메모 저장"; }),
     S.assets ? el("div", { class: "field wide" }, "사진",
       el("div", { class: "actions" },
         el("label", { class: "btn small" }, "사진 고르기", el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: "new-files", onchange: e => { NEW.files = [...e.target.files]; fileInfo.textContent = NEW.files.length ? `${NEW.files.length}장 선택됨 (고른 순서 = 사진 번호)` : ""; } })),
@@ -551,7 +672,13 @@ async function createPost(request) {
   if (!S.db) { toast("저장소에 연결되지 않아 저장할 수 없어요."); return; }
   const data = cleanFields(NEW.data);
   if (!data.title) { toast("제목을 적어주세요."); document.getElementById("new-title")?.focus(); return; }
-  const btn = document.getElementById("new-save"); btn.disabled = true;
+  const btn = document.getElementById("new-save");
+  if (similarTitles(data.title, null).length && !NEW.dupAck) {
+    NEW.dupAck = true; btn.textContent = "그래도 저장";
+    toast("비슷한 제목의 글이 이미 있어요. 확인하고 한 번 더 누르면 저장돼요.");
+    return;
+  }
+  btn.disabled = true;
   const ref = S.db.collection("posts").doc();
   const photos = NEW.files.length && S.assets ? await uploadFiles(NEW.files) : [];
   const now = new Date().toISOString();
