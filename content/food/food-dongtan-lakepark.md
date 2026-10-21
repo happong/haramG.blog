@@ -1,5 +1,5 @@
 ---
-title: 동탄호수공원 피크닉
+title: 동탄 호수공원에서 보낸 완벽한 초가울 주말
 dashboard_id: food-dongtan-lakepark
 category: food
 status: published

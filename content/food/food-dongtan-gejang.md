@@ -1,5 +1,5 @@
 ---
-title: 동탄 참좋은밥상 (게장 무한리필)
+title: 참 좋은 밥상 게장 솔직 후기(위생이슈)
 dashboard_id: food-dongtan-gejang
 category: food
 status: published

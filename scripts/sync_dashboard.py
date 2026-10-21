@@ -6,7 +6,7 @@ ArtifactData list 를 out_dir 로 받은 폴더를 넘긴다:
 
     python3 scripts/sync_dashboard.py <dump_dir>/posts
 
-content/{food,dev,ai}/*.md 를 모두 지우고 DB 기준으로 다시 만든다.
+content/{food,dev,ai,life}/*.md 를 모두 지우고 DB 기준으로 다시 만든다.
 """
 
 import json
@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = ROOT / "content"
-CATEGORIES = ("food", "dev", "ai")
+CATEGORIES = ("food", "dev", "ai", "life")
 
 
 def status_of(doc: dict) -> str:

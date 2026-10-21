@@ -1,0 +1,20 @@
+---
+title: 동탄호수공원맛집 테오쿠진 양고기 솔직 후기기
+dashboard_id: food-teokujin-lamb
+category: food
+status: published
+stage: draft
+visited: 
+planned: 
+published: 
+tistory_done: false
+tistory_published: 
+season: false
+season_end: 
+priority: 3
+photos: 0
+---
+
+## 경험 메모
+
+네이버 발행 완료 (제목 목록으로 등록). 발행일 미기록.
