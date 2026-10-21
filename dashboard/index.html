@@ -431,11 +431,15 @@ function buildDetail(p) {
     S.assets ? el("button", { type: "button", "aria-label": `사진 ${i + 1} 빼기`, onclick: () => removePhoto(p, id) }, "×") : null)));
   if (S.assets) phBox.append(el("label", { class: "btn small", style: "align-self:center" }, "+ 사진 추가",
     el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: `up-${p.id}`, onchange: e => addPhotos(p, e.target) })));
-  kids.push(el("div", { class: "field wide" }, "사진 (번호 순서대로 초안에 [사진 1] 처럼 표시돼요)", phBox));
+  kids.push(el("div", { class: "field wide" }, "사진 (순서 상관없이 한 번에 올려도 돼요. Claude가 보고 자리를 정해줘요)", phBox));
 
   if (p.questions && p.stage === "question") kids.push(el("div", { class: "box q" },
     el("h3", { text: "Claude가 확인하고 싶은 것" }), el("p", { text: p.questions }),
     el("p", { class: "muted", style: "font-size:13px", text: "답은 경험 메모 아래에 이어서 적고 '저장하고 다듬기 요청'을 눌러주세요." })));
+
+  if (p.photoNotes) kids.push(el("div", { class: "box", style: "background:var(--bg);border:1px solid var(--line)" },
+    el("h3", { text: "사진 배치 안내 (Claude)" }), el("p", { text: p.photoNotes }),
+    el("p", { class: "muted", style: "font-size:13px", text: "초안의 [사진 N] 자리에 대시보드의 사진 N을 넣으면 돼요. 이 안내는 복사되지 않아요." })));
 
   // 초안
   const hasN = !!p.draftNaver, hasT = !!p.draftTistory;
