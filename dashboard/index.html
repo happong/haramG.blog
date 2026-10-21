@@ -1,0 +1,598 @@
+<title>하해 블로그 보드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 주간 플래너 띠(월~일) → 챙길 것 → 글 목록(행을 펼치면 편집). 한 열, 폭 980px */
+:root {
+  --bg: #F4F5F9;
+  --surface: #FFFFFF;
+  --ink: #1C2030;
+  --muted: #5E6579;
+  --line: #E0E3EC;
+  --accent: #B8336A;
+  --food: #C7572A;
+  --dev: #0F7C77;
+  --ai: #6A4FCB;
+  --warn: #A86A12;
+  --danger: #B83B32;
+  --ok: #2E7D4F;
+  --font-display: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141B; --surface: #1B1E28; --ink: #E8EAF1; --muted: #A1A7B8; --line: #2C3040;
+    --accent: #EE7BA6; --food: #F08A5D; --dev: #4CC2B9; --ai: #A895F5; --warn: #E3B04B; --danger: #F07A6E; --ok: #6BC793;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141B; --surface: #1B1E28; --ink: #E8EAF1; --muted: #A1A7B8; --line: #2C3040;
+  --accent: #EE7BA6; --food: #F08A5D; --dev: #4CC2B9; --ai: #A895F5; --warn: #E3B04B; --danger: #F07A6E; --ok: #6BC793;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: 30px; line-height: 1.2; }
+h2 { font-size: 20px; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+header.top p { margin: 4px 0 0; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.btn.danger { color: var(--danger); }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+
+/* 이번 주 목표 */
+.quota { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
+.q .name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.q .count { font-family: var(--font-mono); font-size: 22px; }
+.dots { display: flex; gap: 6px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--c); }
+.dot.done { background: var(--c); }
+.dot.plan { background: color-mix(in srgb, var(--c) 30%, transparent); }
+.q .hint { font-size: 13px; color: var(--muted); }
+
+/* 주간 플래너 */
+.planner-scroll { overflow-x: auto; }
+.planner { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); min-width: 770px; }
+.day { padding: 10px; border-left: 1px solid var(--line); min-height: 108px; display: grid; align-content: start; gap: 6px; }
+.day:first-child { border-left: 0; }
+.day .d { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+.day.today { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.day.today .d { color: var(--accent); font-weight: 600; }
+.pchip { font-size: 12.5px; line-height: 1.35; padding: 4px 6px; border-radius: 6px; background: color-mix(in srgb, var(--c) 13%, transparent); border-left: 3px solid var(--c); cursor: pointer; text-align: left; border-top: 0; border-right: 0; border-bottom: 0; color: var(--ink); }
+.pchip.done { opacity: .65; text-decoration: line-through; }
+
+/* 챙길 것 */
+.todo-list { display: grid; gap: 8px; }
+.todo { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; text-align: left; width: 100%; }
+.todo .tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+.todo .t { min-width: 0; overflow-wrap: anywhere; }
+
+/* 목록 */
+.listbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 6px 12px; font-size: 14px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.posts { display: grid; gap: 8px; }
+.post { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.post.open { border-color: var(--muted); }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; }
+.row .main { cursor: pointer; min-width: 0; display: grid; gap: 3px; background: none; border: 0; text-align: left; padding: 0; }
+.row .title { font-weight: 600; overflow-wrap: anywhere; }
+.row .meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.cat { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); white-space: nowrap; }
+.pill { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.st-idea { color: var(--muted); } .st-memo { color: var(--accent); } .st-question { color: var(--warn); } .st-draft { color: var(--dev); } .st-published { color: var(--ok); }
+.season { color: var(--warn); font-weight: 600; }
+.checks { display: flex; gap: 12px; flex-wrap: wrap; justify-content: end; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; white-space: nowrap; cursor: pointer; }
+.checks input { width: 17px; height: 17px; accent-color: var(--ok); }
+
+.detail { border-top: 1px solid var(--line); padding: 16px 14px 18px; display: grid; gap: 16px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.field.wide { grid-column: 1 / -1; }
+.field.span2 { grid-column: span 2; }
+@media (max-width: 420px) { .field.span2 { grid-column: 1 / -1; } }
+.field input, .field select, .field textarea { color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font-size: 14.5px; width: 100%; }
+.field textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
+.inline { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; }
+.box { border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; }
+.box.q { background: color-mix(in srgb, var(--warn) 11%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); }
+.box h3 { margin: 0; font-size: 14px; }
+.box p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.photos { display: flex; flex-wrap: wrap; gap: 10px; align-items: start; }
+.ph { position: relative; width: 104px; display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.ph img { width: 104px; height: 104px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); }
+.ph button { position: absolute; top: 4px; right: 4px; border: 0; border-radius: 50%; width: 24px; height: 24px; background: rgba(0,0,0,.6); color: #fff; font-size: 14px; line-height: 1; }
+.drafts { display: grid; gap: 8px; }
+.draft-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.draft { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 480px; overflow: auto; font-size: 14.5px; line-height: 1.7; margin: 0; font-family: var(--font-body); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.actions .spacer { flex: 1; }
+.confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--danger); }
+
+.newform { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 16px; display: grid; gap: 14px; }
+.notice { background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 18px; color: var(--muted); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
+.flow { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.flow b { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 640px) {
+  .quota { grid-template-columns: 1fr; }
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .row > .cat { justify-self: start; }
+  .checks { justify-content: start; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>하해 블로그 보드</h1>
+      <p class="muted" id="weekLabel">이번 주</p>
+    </div>
+    <button class="btn primary" id="newBtn" type="button">+ 경험 메모 올리기</button>
+  </header>
+
+  <div class="flow" aria-label="작업 흐름">
+    <span><b>① 메모 올리기</b> 대충 써도 돼요</span>
+    <span>→ <b>② Claude가 다듬기</b> 프롬프트 확인 → 메모 확인 → 작성</span>
+    <span>→ <b>③ 초안 복사해서 발행</b></span>
+    <span>→ <b>④ 발행 체크</b></span>
+  </div>
+
+  <section id="newSection" hidden></section>
+
+  <section aria-labelledby="hQuota" style="display:grid;gap:12px">
+    <h2 id="hQuota">이번 주 목표</h2>
+    <div class="quota" id="quota"></div>
+  </section>
+
+  <section aria-labelledby="hPlan" style="display:grid;gap:12px">
+    <h2 id="hPlan">주간 플래너</h2>
+    <div class="planner-scroll"><div class="planner" id="planner"></div></div>
+  </section>
+
+  <section aria-labelledby="hTodo" style="display:grid;gap:12px">
+    <h2 id="hTodo">챙길 것</h2>
+    <div class="todo-list" id="todo"></div>
+  </section>
+
+  <section aria-labelledby="hList" style="display:grid;gap:12px">
+    <div class="listbar">
+      <h2 id="hList">글 목록</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="seg" role="group" aria-label="발행 상태" id="segState">
+          <button type="button" data-v="todo" aria-pressed="true">안 올린 글</button>
+          <button type="button" data-v="done" aria-pressed="false">올린 글</button>
+          <button type="button" data-v="all" aria-pressed="false">전체</button>
+        </div>
+        <div class="seg" role="group" aria-label="카테고리" id="segCat">
+          <button type="button" data-v="all" aria-pressed="true">모두</button>
+          <button type="button" data-v="food" aria-pressed="false">맛집·추천</button>
+          <button type="button" data-v="dev" aria-pressed="false">개발</button>
+          <button type="button" data-v="ai" aria-pressed="false">AI</button>
+        </div>
+      </div>
+    </div>
+    <div class="posts" id="posts"><div class="notice">글 목록을 불러오는 중이에요…</div></div>
+  </section>
+</div>
+
+<script>
+const CAT = {
+  food: { label: "맛집·추천", quota: 2, color: "var(--food)" },
+  dev:  { label: "개발 공부", quota: 1, color: "var(--dev)" },
+  ai:   { label: "AI 활용기", quota: 1, color: "var(--ai)" },
+};
+const STAGE = {
+  idea: "메모 전", memo: "다듬기 요청", question: "질문 확인", draft: "초안 완료", published: "발행 완료",
+};
+const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const ALERT_DAYS = 14;
+
+const S = { db: null, assets: null, posts: [], filter: "todo", cat: "all", open: null, edits: {}, rows: new Map(), confirmDel: null, draftTab: {} };
+
+// ---------- 날짜 (KST) ----------
+const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" });
+const todayStr = () => fmt.format(new Date());
+const toDate = s => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const toStr = d => d.toISOString().slice(0, 10);
+const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return toStr(d); };
+const diffDays = (a, b) => Math.round((toDate(a) - toDate(b)) / 86400000);
+function weekStart(s) { const d = toDate(s); const wd = (d.getUTCDay() + 6) % 7; return addDays(s, -wd); }
+const md = s => { const [, m, d] = s.split("-"); return `${+m}/${+d}`; };
+const isDate = s => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+// ---------- helpers ----------
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "style") n.setAttribute("style", v);
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (k === "text") n.textContent = v;
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return n;
+};
+let toastTimer;
+function toast(msg) {
+  document.querySelector(".toast")?.remove();
+  const t = el("div", { class: "toast", role: "status", text: msg });
+  document.body.append(t);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 2600);
+}
+const stageOf = p => p.naverDone ? "published" : (STAGE[p.stage] ? p.stage : "idea");
+const catOf = p => CAT[p.category] ? p.category : "food";
+const daysLeft = p => (p.season && isDate(p.seasonEnd)) ? diffDays(p.seasonEnd, todayStr()) : null;
+const photoUrl = id => "/_blob/" + id;
+
+function dbErr(e) {
+  const code = e && e.code;
+  if (code === "quota_exceeded") return "저장 공간이 가득 찼어요. 오래된 글을 지운 뒤 다시 해주세요.";
+  if (code === "invalid_argument") return "저장 권한이 없어서 저장하지 못했어요.";
+  if (code === "resource_exhausted") return "요청이 너무 많아요. 잠시 뒤 다시 해주세요.";
+  return "저장하지 못했어요. 잠시 뒤 다시 해주세요.";
+}
+
+// ---------- 이번 주 목표 ----------
+function renderQuota() {
+  const t = todayStr(), ws = weekStart(t), we = addDays(ws, 6);
+  document.getElementById("weekLabel").textContent = `이번 주 ${md(ws)}(월) ~ ${md(we)}(일) · 오늘 ${md(t)}`;
+  const box = document.getElementById("quota"); box.replaceChildren();
+  for (const [k, c] of Object.entries(CAT)) {
+    const mine = S.posts.filter(p => catOf(p) === k);
+    const done = mine.filter(p => p.naverDone && isDate(p.naverDoneAt) && p.naverDoneAt >= ws && p.naverDoneAt <= we).length;
+    const plan = mine.filter(p => !p.naverDone && isDate(p.planned) && p.planned >= ws && p.planned <= we).length;
+    const lack = Math.max(c.quota - done - plan, 0);
+    const dots = [];
+    for (let i = 0; i < Math.max(c.quota, done + plan); i++) dots.push(el("span", { class: "dot " + (i < done ? "done" : i < done + plan ? "plan" : "") }));
+    const hint = done >= c.quota ? "이번 주 목표 달성!" : lack ? `일정 잡을 글 ${lack}개 더 필요해요` : `예정대로면 목표 달성`;
+    box.append(el("div", { class: "q", style: `--c:${c.color}` },
+      el("div", { class: "name" }, el("span", { class: "cat", style: `--c:${c.color}`, text: c.label })),
+      el("div", { class: "count" }, `${done}`, el("span", { class: "muted", style: "font-size:15px" }, ` / ${c.quota} 발행`), plan ? el("span", { class: "muted", style: "font-size:13px;font-family:var(--font-body)" }, ` · 예정 ${plan}`) : null),
+      el("div", { class: "dots", "aria-hidden": "true" }, dots),
+      el("div", { class: "hint", text: hint })));
+  }
+}
+
+// ---------- 주간 플래너 ----------
+function renderPlanner() {
+  const t = todayStr(), ws = weekStart(t);
+  const box = document.getElementById("planner"); box.replaceChildren();
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(ws, i);
+    const items = S.posts.filter(p => (!p.naverDone && p.planned === day) || (p.naverDone && p.naverDoneAt === day));
+    box.append(el("div", { class: "day" + (day === t ? " today" : "") },
+      el("div", { class: "d" }, el("span", { text: `${DAYS[i]} ${md(day)}` }), day === t ? el("span", { text: "오늘" }) : null),
+      items.map(p => el("button", { type: "button", class: "pchip" + (p.naverDone ? " done" : ""), style: `--c:${CAT[catOf(p)].color}`, onclick: () => openPost(p.id), text: (p.naverDone ? "✓ " : "") + (p.title || "제목 없음") }))));
+  }
+}
+
+// ---------- 챙길 것 ----------
+function renderTodo() {
+  const t = todayStr();
+  const out = [];
+  const live = S.posts.filter(p => !p.naverDone);
+  live.filter(p => { const d = daysLeft(p); return d !== null && d <= ALERT_DAYS; })
+    .sort((a, b) => daysLeft(a) - daysLeft(b))
+    .forEach(p => { const d = daysLeft(p); out.push({ p, c: "var(--warn)", tag: d < 0 ? `시즌 ${-d}일 지남` : `시즌 D-${d}`, text: `${p.title || "제목 없음"} — ${d < 0 ? "시즌이 지났어요. 올릴지 정해주세요" : `${md(p.seasonEnd)}까지 올려야 해요`}` }); });
+  live.filter(p => isDate(p.planned) && p.planned < t).forEach(p => out.push({ p, c: "var(--danger)", tag: "예정일 지남", text: `${p.title || "제목 없음"} — ${md(p.planned)} 예정이었어요` }));
+  live.filter(p => p.stage === "question").forEach(p => out.push({ p, c: "var(--warn)", tag: "질문 답하기", text: `${p.title || "제목 없음"} — Claude가 확인할 게 있어요` }));
+  live.filter(p => p.stage === "draft").forEach(p => out.push({ p, c: "var(--dev)", tag: "발행 대기", text: `${p.title || "제목 없음"} — 초안 복사해서 올리면 돼요` }));
+  S.posts.filter(p => catOf(p) === "dev" && p.naverDone && !p.tistoryDone && p.draftTistory).forEach(p => out.push({ p, c: "var(--dev)", tag: "티스토리", text: `${p.title || "제목 없음"} — 티스토리 초안이 남아 있어요` }));
+  const memos = live.filter(p => p.stage === "memo");
+  const box = document.getElementById("todo"); box.replaceChildren();
+  for (const o of out) box.append(el("button", { type: "button", class: "todo", onclick: () => openPost(o.p.id) }, el("span", { class: "tag", style: `--c:${o.c}`, text: o.tag }), el("span", { class: "t", text: o.text })));
+  if (memos.length) box.append(el("div", { class: "notice", style: "padding:10px 14px" }, `다듬기 요청 ${memos.length}건이 Claude를 기다리고 있어요. 채팅에서 "대시보드 확인해줘"라고 말해주세요.`));
+  if (!out.length && !memos.length) box.append(el("div", { class: "notice", text: "지금 챙길 일이 없어요." }));
+}
+
+// ---------- 글 목록 ----------
+function sortedPosts() {
+  const t = todayStr();
+  let list = S.posts.filter(p => S.cat === "all" || catOf(p) === S.cat);
+  if (S.filter === "todo") list = list.filter(p => !p.naverDone);
+  if (S.filter === "done") list = list.filter(p => p.naverDone);
+  const key = p => {
+    const d = daysLeft(p);
+    return [p.naverDone ? 1 : 0, d !== null && d <= ALERT_DAYS ? d : 9999, isDate(p.planned) ? diffDays(p.planned, t) : 9999, Number(p.priority) || 3, p.createdAt || ""];
+  };
+  if (S.filter === "done") return list.sort((a, b) => (b.naverDoneAt || "").localeCompare(a.naverDoneAt || ""));
+  return list.sort((a, b) => { const ka = key(a), kb = key(b); for (let i = 0; i < ka.length; i++) { if (ka[i] < kb[i]) return -1; if (ka[i] > kb[i]) return 1; } return 0; });
+}
+
+function renderPosts() {
+  const box = document.getElementById("posts");
+  if (!S.db) return;
+  const list = sortedPosts();
+  if (!list.length) {
+    S.rows.clear();
+    box.replaceChildren(el("div", { class: "notice" }, S.posts.length ? "조건에 맞는 글이 없어요." : "아직 올린 메모가 없어요. 위의 '+ 경험 메모 올리기'로 첫 글을 시작해보세요."));
+    return;
+  }
+  const next = new Map();
+  const nodes = list.map(p => {
+    const open = S.open === p.id;
+    const sig = open ? `${S.confirmDel === p.id}|${S.draftTab[p.id] || ""}` : "";
+    const prev = S.rows.get(p.id);
+    const node = (prev && prev.data === p._raw && prev.open === open && prev.sig === sig) ? prev.node : buildPost(p, open);
+    next.set(p.id, { data: p._raw, open, sig, node });
+    return node;
+  });
+  S.rows = next;
+  const same = box.children.length === nodes.length && nodes.every((n, i) => box.children[i] === n);
+  if (!same) box.replaceChildren(...nodes);
+}
+
+function buildPost(p, open) {
+  const c = CAT[catOf(p)], st = stageOf(p), d = daysLeft(p);
+  const meta = [
+    el("span", { class: "pill st-" + st, text: STAGE[st] }),
+    isDate(p.planned) && !p.naverDone ? el("span", { text: `예정 ${md(p.planned)}` }) : null,
+    p.naverDone ? el("span", { text: isDate(p.naverDoneAt) ? `발행 ${md(p.naverDoneAt)}` : "발행 날짜 미기록" }) : null,
+    d !== null && !p.naverDone ? el("span", { class: "season", text: d < 0 ? `시즌 ${-d}일 지남` : `시즌 D-${d}` }) : null,
+    isDate(p.visited) ? el("span", { text: `경험 ${md(p.visited)}` }) : null,
+    (p.photos || []).length ? el("span", { text: `사진 ${(p.photos || []).length}장` }) : null,
+  ];
+  const checks = el("div", { class: "checks" },
+    el("label", {}, el("input", { type: "checkbox", id: `nv-${p.id}`, checked: !!p.naverDone, onchange: e => toggleDone(p, "naver", e.target) }), "네이버 발행"),
+    catOf(p) === "dev" ? el("label", {}, el("input", { type: "checkbox", id: `ts-${p.id}`, checked: !!p.tistoryDone, onchange: e => toggleDone(p, "tistory", e.target) }), "티스토리 발행") : null);
+  return el("article", { class: "post" + (open ? " open" : ""), id: `post-${p.id}` },
+    el("div", { class: "row" },
+      el("span", { class: "cat", style: `--c:${c.color}`, text: c.label }),
+      el("button", { type: "button", class: "main", "aria-expanded": open ? "true" : "false", onclick: () => toggleOpen(p.id) },
+        el("span", { class: "title", text: p.title || "제목 없음" }),
+        el("span", { class: "meta" }, meta)),
+      checks),
+    open ? buildDetail(p) : null);
+}
+
+function fieldVal(p, k) { const e = S.edits[p.id]; return e && k in e ? e[k] : p[k]; }
+function setEdit(p, k, v) { (S.edits[p.id] ||= {})[k] = v; }
+
+function formFields(get, set, idp) {
+  const inp = (k, label, type = "text", extra = {}) => el("label", { class: "field" + (extra.wide ? " wide" : "") }, label,
+    el("input", { type, id: `${idp}-${k}`, value: get(k) ?? "", oninput: e => set(k, e.target.value), placeholder: extra.ph || null }));
+  const sel = (k, label, opts) => { const s = el("select", { id: `${idp}-${k}`, onchange: e => set(k, e.target.value) }, opts.map(([v, t]) => el("option", { value: v, text: t }))); s.value = String(get(k) ?? opts[0][0]); return el("label", { class: "field" }, label, s); };
+  const seasonOn = !!get("season");
+  const seasonBox = el("input", { type: "checkbox", id: `${idp}-season`, checked: seasonOn, onchange: e => { set("season", e.target.checked); endWrap.hidden = !e.target.checked; } });
+  const endWrap = inp("seasonEnd", "시즌 마감일 (이 날 전에 올리기)", "date");
+  endWrap.hidden = !seasonOn;
+  return el("div", { class: "fields" },
+    inp("title", "제목 (가게·장소 이름이나 주제)", "text", { wide: true, ph: "예: 서현역 햇빛꽃집" }),
+    sel("category", "카테고리", Object.entries(CAT).map(([k, c]) => [k, c.label])),
+    inp("visited", "경험한 날", "date"),
+    inp("planned", "발행 예정일", "date"),
+    sel("priority", "우선순위", [["3", "보통"], ["1", "1 · 가장 먼저"], ["2", "2 · 높음"], ["4", "4 · 낮음"], ["5", "5 · 나중에"]]),
+    el("div", { class: "field span2" }, "시즌 콘텐츠", el("label", { class: "inline" }, seasonBox, "기간 한정 (벚꽃, 축제, 팝업 등)")),
+    endWrap,
+    el("label", { class: "field wide" }, "경험 메모 — 대충 써도 돼요. 위치, 가격, 메뉴, 좋았던 점, 아쉬운 점, 재방문 의사…",
+      el("textarea", { id: `${idp}-memo`, oninput: e => set("memo", e.target.value), text: get("memo") || "" })));
+}
+
+function buildDetail(p) {
+  const kids = [formFields(k => fieldVal(p, k), (k, v) => setEdit(p, k, v), `f-${p.id}`)];
+
+  // 사진
+  const photos = p.photos || [];
+  const phBox = el("div", { class: "photos" }, photos.map((id, i) => el("div", { class: "ph" },
+    el("img", { src: photoUrl(id), alt: `사진 ${i + 1}`, loading: "lazy", onerror: e => { e.target.alt = "사진을 불러오지 못했어요"; } }),
+    `사진 ${i + 1}`,
+    S.assets ? el("button", { type: "button", "aria-label": `사진 ${i + 1} 빼기`, onclick: () => removePhoto(p, id) }, "×") : null)));
+  if (S.assets) phBox.append(el("label", { class: "btn small", style: "align-self:center" }, "+ 사진 추가",
+    el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: `up-${p.id}`, onchange: e => addPhotos(p, e.target) })));
+  kids.push(el("div", { class: "field wide" }, "사진 (번호 순서대로 초안에 [사진 1] 처럼 표시돼요)", phBox));
+
+  if (p.questions && p.stage === "question") kids.push(el("div", { class: "box q" },
+    el("h3", { text: "Claude가 확인하고 싶은 것" }), el("p", { text: p.questions }),
+    el("p", { class: "muted", style: "font-size:13px", text: "답은 경험 메모 아래에 이어서 적고 '저장하고 다듬기 요청'을 눌러주세요." })));
+
+  // 초안
+  const hasN = !!p.draftNaver, hasT = !!p.draftTistory;
+  if (hasN || hasT) {
+    const tab = S.draftTab[p.id] || (hasN ? "naver" : "tistory");
+    const text = tab === "naver" ? p.draftNaver : p.draftTistory;
+    const pre = el("pre", { class: "draft", text: text || "아직 없어요." });
+    kids.push(el("div", { class: "drafts" },
+      el("div", { class: "draft-head" },
+        el("div", { class: "seg", role: "group", "aria-label": "초안 플랫폼" },
+          hasN ? el("button", { type: "button", "aria-pressed": tab === "naver" ? "true" : "false", onclick: () => { S.draftTab[p.id] = "naver"; renderPosts(); } }, "네이버 초안") : null,
+          hasT ? el("button", { type: "button", "aria-pressed": tab === "tistory" ? "true" : "false", onclick: () => { S.draftTab[p.id] = "tistory"; renderPosts(); } }, "티스토리 초안") : null),
+        el("button", { type: "button", class: "btn small", onclick: () => copyText(text, pre) }, "초안 복사")),
+      pre));
+  }
+
+  const actions = el("div", { class: "actions" },
+    el("button", { type: "button", class: "btn primary", onclick: () => savePost(p, true) }, "저장하고 다듬기 요청"),
+    el("button", { type: "button", class: "btn", onclick: () => savePost(p, false) }, "저장만"),
+    el("span", { class: "spacer" }),
+    S.confirmDel === p.id
+      ? el("span", { class: "confirm" }, "정말 지울까요?", el("button", { type: "button", class: "btn small danger", onclick: () => deletePost(p) }, "지우기"), el("button", { type: "button", class: "btn small", onclick: () => { S.confirmDel = null; renderPosts(); } }, "취소"))
+      : el("button", { type: "button", class: "btn small danger", onclick: () => { S.confirmDel = p.id; renderPosts(); } }, "글 지우기"));
+  kids.push(actions);
+  return el("div", { class: "detail" }, kids);
+}
+
+function copyText(text, pre) {
+  const done = () => toast("초안을 복사했어요. 블로그 에디터에 붙여넣으세요.");
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("복사가 막혀 있어요. 선택된 글을 길게 눌러 복사해주세요."); };
+  try { navigator.clipboard.writeText(text || "").then(done, fallback); } catch { fallback(); }
+}
+
+// ---------- 동작 ----------
+function toggleOpen(id) { S.open = S.open === id ? null : id; S.confirmDel = null; renderPosts(); }
+function openPost(id) {
+  const p = S.posts.find(x => x.id === id); if (!p) return;
+  S.filter = p.naverDone ? "done" : "todo"; S.cat = "all"; S.open = id; S.confirmDel = null;
+  syncSegs(); renderPosts();
+  document.getElementById(`post-${id}`)?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+function cleanFields(o) {
+  const out = {};
+  if ("title" in o) out.title = String(o.title || "").trim();
+  if ("category" in o) out.category = CAT[o.category] ? o.category : "food";
+  for (const k of ["visited", "planned", "seasonEnd"]) if (k in o) out[k] = isDate(o[k]) ? o[k] : "";
+  if ("priority" in o) out.priority = Number(o.priority) || 3;
+  if ("season" in o) out.season = !!o.season;
+  if ("memo" in o) out.memo = String(o.memo || "");
+  return out;
+}
+
+async function savePost(p, request) {
+  const patch = cleanFields(S.edits[p.id] || {});
+  if (request) { patch.stage = "memo"; }
+  patch.updatedAt = new Date().toISOString();
+  try {
+    await S.db.collection("posts").doc(p.id).update(patch);
+    delete S.edits[p.id];
+    toast(request ? "저장했어요. Claude에게 다듬기를 요청해두었어요." : "저장했어요.");
+  } catch (e) { toast(dbErr(e)); }
+}
+
+async function toggleDone(p, which, box) {
+  const on = box.checked, t = todayStr();
+  const patch = which === "naver"
+    ? { naverDone: on, naverDoneAt: on ? t : "" }
+    : { tistoryDone: on, tistoryDoneAt: on ? t : "" };
+  patch.updatedAt = new Date().toISOString();
+  box.disabled = true;
+  try {
+    await S.db.collection("posts").doc(p.id).update(patch);
+    toast(on ? `${which === "naver" ? "네이버" : "티스토리"} 발행으로 체크했어요.` : "발행 체크를 풀었어요.");
+  } catch (e) { box.checked = !on; toast(dbErr(e)); }
+  box.disabled = false;
+}
+
+async function deletePost(p) {
+  try {
+    await S.db.collection("posts").doc(p.id).delete();
+    for (const id of p.photos || []) { try { await S.assets?.delete(id); } catch {} }
+    S.open = null; S.confirmDel = null; delete S.edits[p.id];
+    toast("글을 지웠어요.");
+  } catch (e) { toast(dbErr(e)); }
+}
+
+async function uploadFiles(files) {
+  const ids = [];
+  for (const f of files) {
+    try { const r = await S.assets.upload(f); ids.push(r.id); }
+    catch (e) {
+      const c = e && e.code;
+      toast(c === "too_large" ? `${f.name}: 20MB보다 커서 올리지 못했어요.` : c === "unsupported_type" ? `${f.name}: 지원하지 않는 형식이에요 (jpg, png, webp, gif).` : c === "quota_or_state" ? "사진 저장 공간이 가득 찼어요." : `${f.name}: 사진을 올리지 못했어요.`);
+    }
+  }
+  return ids;
+}
+
+async function addPhotos(p, input) {
+  const files = [...input.files]; input.value = "";
+  if (!files.length) return;
+  toast(`사진 ${files.length}장 올리는 중…`);
+  const ids = await uploadFiles(files);
+  if (!ids.length) return;
+  try { await S.db.collection("posts").doc(p.id).update({ photos: [...(p.photos || []), ...ids], updatedAt: new Date().toISOString() }); toast(`사진 ${ids.length}장을 추가했어요.`); }
+  catch (e) { toast(dbErr(e)); }
+}
+
+async function removePhoto(p, id) {
+  try {
+    await S.db.collection("posts").doc(p.id).update({ photos: (p.photos || []).filter(x => x !== id), updatedAt: new Date().toISOString() });
+    try { await S.assets.delete(id); } catch {}
+    toast("사진을 뺐어요.");
+  } catch (e) { toast(dbErr(e)); }
+}
+
+// ---------- 새 메모 ----------
+const NEW = { data: {}, files: [] };
+function openNew() {
+  const sec = document.getElementById("newSection");
+  if (!sec.hidden) { sec.hidden = true; return; }
+  NEW.data = { category: "food", priority: "3", visited: todayStr() }; NEW.files = [];
+  const get = k => NEW.data[k], set = (k, v) => { NEW.data[k] = v; };
+  const fileInfo = el("span", { class: "muted", style: "font-size:13px", text: "" });
+  const req = el("input", { type: "checkbox", id: "new-request", checked: true });
+  sec.replaceChildren(el("form", { class: "newform", onsubmit: e => { e.preventDefault(); createPost(req.checked); } },
+    el("h2", { text: "경험 메모 올리기" }),
+    formFields(get, set, "new"),
+    S.assets ? el("div", { class: "field wide" }, "사진",
+      el("div", { class: "actions" },
+        el("label", { class: "btn small" }, "사진 고르기", el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: "new-files", onchange: e => { NEW.files = [...e.target.files]; fileInfo.textContent = NEW.files.length ? `${NEW.files.length}장 선택됨 (고른 순서 = 사진 번호)` : ""; } })),
+        fileInfo)) : null,
+    el("label", { class: "inline" }, req, "저장하면 Claude에게 다듬기 요청하기"),
+    el("div", { class: "actions" },
+      el("button", { type: "submit", class: "btn primary", id: "new-save" }, "메모 저장"),
+      el("button", { type: "button", class: "btn", onclick: () => { sec.hidden = true; } }, "닫기"))));
+  sec.hidden = false;
+  document.getElementById("new-title")?.focus();
+}
+
+async function createPost(request) {
+  if (!S.db) { toast("저장소에 연결되지 않아 저장할 수 없어요."); return; }
+  const data = cleanFields(NEW.data);
+  if (!data.title) { toast("제목을 적어주세요."); document.getElementById("new-title")?.focus(); return; }
+  const btn = document.getElementById("new-save"); btn.disabled = true;
+  const ref = S.db.collection("posts").doc();
+  const photos = NEW.files.length && S.assets ? await uploadFiles(NEW.files) : [];
+  const now = new Date().toISOString();
+  try {
+    await ref.set({ ...data, photos, stage: request ? "memo" : "idea", questions: "", draftNaver: "", draftTistory: "", naverDone: false, naverDoneAt: "", tistoryDone: false, tistoryDoneAt: "", createdAt: now, updatedAt: now });
+    document.getElementById("newSection").hidden = true;
+    S.filter = "todo"; S.cat = "all"; S.open = ref.id; syncSegs();
+    toast(request ? "메모를 저장하고 다듬기를 요청했어요." : "메모를 저장했어요.");
+  } catch (e) { toast(dbErr(e)); }
+  btn.disabled = false;
+}
+
+// ---------- 필터 ----------
+function syncSegs() {
+  for (const b of document.querySelectorAll("#segState button")) b.setAttribute("aria-pressed", b.dataset.v === S.filter ? "true" : "false");
+  for (const b of document.querySelectorAll("#segCat button")) b.setAttribute("aria-pressed", b.dataset.v === S.cat ? "true" : "false");
+}
+document.getElementById("segState").addEventListener("click", e => { const v = e.target.closest("button")?.dataset.v; if (!v) return; S.filter = v; syncSegs(); renderPosts(); });
+document.getElementById("segCat").addEventListener("click", e => { const v = e.target.closest("button")?.dataset.v; if (!v) return; S.cat = v; syncSegs(); renderPosts(); });
+document.getElementById("newBtn").addEventListener("click", openNew);
+
+function renderAll() { renderQuota(); renderPlanner(); renderTodo(); renderPosts(); }
+renderQuota(); renderPlanner();
+document.getElementById("todo").append(el("div", { class: "notice", text: "불러오는 중이에요…" }));
+
+// ---------- 시작 ----------
+(async () => {
+  const db = await window.claude?.use?.("db");
+  if (!db) {
+    document.getElementById("posts").replaceChildren(el("div", { class: "notice", text: "글 저장소에 연결하지 못했어요. claude.ai에 로그인한 상태로 이 페이지를 열어주세요." }));
+    document.getElementById("todo").replaceChildren();
+    document.getElementById("newBtn").disabled = true;
+    return;
+  }
+  S.db = db;
+  try { S.assets = await window.claude.use("assets"); } catch { S.assets = null; }
+  db.collection("posts").onSnapshot(snap => {
+    S.posts = snap.docs.map(d => { const raw = d.data(); return { ...raw, id: d.id, _raw: raw }; });
+    renderAll();
+  }, () => {
+    document.getElementById("posts").replaceChildren(el("div", { class: "notice", text: "글 목록을 불러오지 못했어요. 페이지를 새로고침해주세요." }));
+  });
+})();
+</script>
