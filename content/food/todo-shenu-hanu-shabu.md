@@ -13,4 +13,6 @@ season: false
 season_end: 
 priority: 3
 photos: 0
+place_shots: 0
+no_place: false
 ---

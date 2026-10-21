@@ -130,6 +130,7 @@ header.top p { margin: 4px 0 0; }
 
 .dupbox { background: color-mix(in srgb, var(--warn) 11%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; display: grid; gap: 4px; }
 .dupbox b { color: var(--warn); }
+.field.needplace { border: 1px dashed var(--danger); border-radius: 8px; padding: 10px; }
 .dupbox ul { margin: 0; padding-left: 18px; }
 .md { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 18px 14px; max-height: 560px; overflow: auto; line-height: 1.7; font-size: 14.5px; overflow-wrap: anywhere; }
 .md h1, .md h2, .md h3 { font-family: var(--font-body); font-weight: 600; margin: 18px 0 6px; }
@@ -200,6 +201,7 @@ header.top p { margin: 4px 0 0; }
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <div class="seg" role="group" aria-label="발행 상태" id="segState">
           <button type="button" data-v="todo" aria-pressed="true">안 올린 글</button>
+          <button type="button" data-v="draft" aria-pressed="false">초안 완료</button>
           <button type="button" data-v="done" aria-pressed="false">올린 글</button>
           <button type="button" data-v="all" aria-pressed="false">전체</button>
         </div>
@@ -263,6 +265,8 @@ function toast(msg) {
   document.body.append(t);
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 2600);
 }
+// 맛집·추천 글은 장소 캡처(네이버 지도 등)가 필수. 제품 후기처럼 장소가 없으면 noPlace 로 표시
+const needsPlace = p => catOf(p) === "food" && !p.noPlace && !(p.placeShots || []).length;
 const stageOf = p => p.naverDone ? "published" : (STAGE[p.stage] ? p.stage : "idea");
 const catOf = p => CAT[p.category] ? p.category : "food";
 const daysLeft = p => (p.season && isDate(p.seasonEnd)) ? diffDays(p.seasonEnd, todayStr()) : null;
@@ -336,6 +340,7 @@ function sortedPosts() {
   let list = S.posts.filter(p => S.cat === "all" || catOf(p) === S.cat);
   if (S.filter === "todo") list = list.filter(p => !p.naverDone);
   if (S.filter === "done") list = list.filter(p => p.naverDone);
+  if (S.filter === "draft") list = list.filter(p => !p.naverDone && p.stage === "draft");
   const key = p => {
     const d = daysLeft(p);
     return [p.naverDone ? 1 : 0, d !== null && d <= ALERT_DAYS ? d : 9999, isDate(p.planned) ? diffDays(p.planned, t) : 9999, Number(p.priority) || 3, p.createdAt || ""];
@@ -379,6 +384,7 @@ function buildPost(p, open) {
     isDate(p.visited) ? el("span", { text: `경험 ${md(p.visited)}` }) : null,
     (p.photos || []).length ? el("span", { text: `사진 ${(p.photos || []).length}장` }) : null,
     similarTitles(p.title, p.id).length ? el("span", { class: "season", text: "비슷한 글 있음" }) : null,
+    !p.naverDone && needsPlace(p) ? el("span", { style: "color:var(--danger);font-weight:600", text: "장소 캡처 필요" }) : null,
   ];
   const checks = el("div", { class: "checks" },
     el("label", {}, el("input", { type: "checkbox", id: `nv-${p.id}`, checked: !!p.naverDone, onchange: e => toggleDone(p, "naver", e.target) }), "네이버 발행"),
@@ -448,6 +454,23 @@ function formFields(get, set, idp, exceptId, onTitle) {
 
 function buildDetail(p) {
   const kids = [formFields(k => fieldVal(p, k), (k, v) => setEdit(p, k, v), `f-${p.id}`, p.id)];
+
+  // 장소 캡처 (필수)
+  if (catOf(p) === "food") {
+    const shots = p.placeShots || [];
+    const plBox = el("div", { class: "photos" }, shots.map((id, i) => el("div", { class: "ph" },
+      el("img", { src: photoUrl(id), alt: `장소 캡처 ${i + 1}`, loading: "lazy" }),
+      `장소 캡처 ${i + 1}`,
+      S.assets ? el("button", { type: "button", "aria-label": `장소 캡처 ${i + 1} 빼기`, onclick: () => removePhoto(p, id, "placeShots") }, "×") : null)));
+    if (S.assets) plBox.append(el("label", { class: "btn small", style: "align-self:center" }, "+ 장소 캡처 추가",
+      el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: `pl-${p.id}`, onchange: e => addPhotos(p, e.target, "placeShots") })));
+    const noPl = el("label", { class: "inline", style: "font-size:13px" },
+      el("input", { type: "checkbox", id: `np-${p.id}`, checked: !!p.noPlace, onchange: e => queueWrite(p.id, () => S.db.collection("posts").doc(p.id).update({ noPlace: e.target.checked, updatedAt: new Date().toISOString() })).catch(err => toast(dbErr(err))) }),
+      "장소 없음 (제품 후기 등)");
+    kids.push(el("div", { class: "field wide" + (needsPlace(p) ? " needplace" : "") },
+      el("span", {}, "📍 장소 캡처 ", el("b", { style: "color:var(--danger)", text: needsPlace(p) ? "필수" : "" }), " — 네이버 지도에서 주소와 영업시간이 보이게 캡처해 주세요. 글에는 안 들어가요."),
+      plBox, noPl));
+  }
 
   // 사진
   const photos = p.photos || [];
@@ -625,6 +648,12 @@ function cleanFields(o) {
 }
 
 async function savePost(p, request) {
+  const cur = S.posts.find(x => x.id === p.id) || p;
+  if (request && needsPlace(cur)) {
+    toast("장소 캡처를 먼저 올려주세요. 장소가 없는 글이면 '장소 없음'에 체크해 주세요.");
+    document.getElementById(`pl-${p.id}`)?.closest(".field")?.scrollIntoView({ block: "center" });
+    return;
+  }
   const ok = await autosave(p.id, request ? { stage: "memo" } : {});
   if (ok === false) return;
   toast(request ? "저장했어요. Claude에게 다듬기를 요청해두었어요." : "저장했어요.");
@@ -686,7 +715,7 @@ function setProgress(text) {
 }
 
 // 한 장 올릴 때마다 바로 글에 연결한다. 중간에 멈춰도 올라간 사진은 남는다.
-async function uploadInto(postId, files) {
+async function uploadInto(postId, files, field = "photos") {
   uploading++;
   let ok = 0, fail = 0;
   const added = [];
@@ -698,8 +727,8 @@ async function uploadInto(postId, files) {
         const r = await S.assets.upload(await shrinkImage(f));
         added.push(r.id);
         await queueWrite(postId, async () => {
-          const cur = S.posts.find(x => x.id === postId)?.photos || [];
-          await S.db.collection("posts").doc(postId).update({ photos: [...new Set([...cur, ...added])], updatedAt: new Date().toISOString() });
+          const cur = S.posts.find(x => x.id === postId)?.[field] || [];
+          await S.db.collection("posts").doc(postId).update({ [field]: [...new Set([...cur, ...added])], updatedAt: new Date().toISOString() });
         });
         ok++;
       } catch (e) {
@@ -715,15 +744,15 @@ async function uploadInto(postId, files) {
   toast(fail ? `사진 ${ok}장 추가, ${fail}장 실패했어요. 실패한 사진은 다시 올려주세요.` : `사진 ${ok}장을 모두 추가했어요.`);
 }
 
-async function addPhotos(p, input) {
+async function addPhotos(p, input, field = "photos") {
   const files = [...input.files]; input.value = "";
   if (!files.length || !S.assets) return;
-  await uploadInto(p.id, files);
+  await uploadInto(p.id, files, field);
 }
 
-async function removePhoto(p, id) {
+async function removePhoto(p, id, field = "photos") {
   try {
-    await queueWrite(p.id, () => S.db.collection("posts").doc(p.id).update({ photos: (S.posts.find(x => x.id === p.id)?.photos || []).filter(x => x !== id), updatedAt: new Date().toISOString() }));
+    await queueWrite(p.id, () => S.db.collection("posts").doc(p.id).update({ [field]: (S.posts.find(x => x.id === p.id)?.[field] || []).filter(x => x !== id), updatedAt: new Date().toISOString() }));
     try { await S.assets.delete(id); } catch {}
     toast("사진을 뺐어요.");
   } catch (e) { toast(dbErr(e)); }
@@ -734,9 +763,10 @@ const NEW = { data: {}, files: [] };
 function openNew() {
   const sec = document.getElementById("newSection");
   if (!sec.hidden) { sec.hidden = true; return; }
-  NEW.data = { category: "food", priority: "3", visited: todayStr() }; NEW.files = []; NEW.dupAck = false;
+  NEW.data = { category: "food", priority: "3", visited: todayStr() }; NEW.files = []; NEW.place = []; NEW.noPlace = false; NEW.dupAck = false;
   const get = k => NEW.data[k], set = (k, v) => { NEW.data[k] = v; };
   const fileInfo = el("span", { class: "muted", style: "font-size:13px", text: "" });
+  const placeInfo = el("span", { class: "muted", style: "font-size:13px", text: "" });
   const req = el("input", { type: "checkbox", id: "new-request", checked: true });
   sec.replaceChildren(el("form", { class: "newform", onsubmit: e => { e.preventDefault(); createPost(req.checked); } },
     el("h2", { text: "경험 메모 올리기" }),
@@ -745,6 +775,11 @@ function openNew() {
       el("div", { class: "actions" },
         el("label", { class: "btn small" }, "사진 고르기", el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: "new-files", onchange: e => { NEW.files = [...e.target.files]; fileInfo.textContent = NEW.files.length ? `${NEW.files.length}장 선택됨 (고른 순서 = 사진 번호)` : ""; } })),
         fileInfo)) : null,
+    S.assets ? el("div", { class: "field wide" }, "📍 장소 캡처 (맛집·추천 글은 필수) — 네이버 지도에서 주소와 영업시간이 보이는 화면",
+      el("div", { class: "actions" },
+        el("label", { class: "btn small" }, "장소 캡처 고르기", el("input", { type: "file", accept: "image/*", multiple: true, hidden: true, id: "new-place", onchange: e => { NEW.place = [...e.target.files]; placeInfo.textContent = NEW.place.length ? `${NEW.place.length}장 선택됨` : ""; } })),
+        placeInfo,
+        el("label", { class: "inline", style: "font-size:13px" }, el("input", { type: "checkbox", id: "new-noplace", onchange: e => { NEW.noPlace = e.target.checked; } }), "장소 없음 (제품 후기 등)"))) : null,
     el("label", { class: "inline" }, req, "저장하면 Claude에게 다듬기 요청하기"),
     el("div", { class: "actions" },
       el("button", { type: "submit", class: "btn primary", id: "new-save" }, "메모 저장"),
@@ -758,6 +793,10 @@ async function createPost(request) {
   const data = cleanFields(NEW.data);
   if (!data.title) { toast("제목을 적어주세요."); document.getElementById("new-title")?.focus(); return; }
   const btn = document.getElementById("new-save");
+  if (request && data.category === "food" && !NEW.noPlace && !(NEW.place || []).length) {
+    toast("맛집·추천 글은 장소 캡처가 필요해요. 장소가 없는 글이면 '장소 없음'에 체크해 주세요.");
+    return;
+  }
   if (similarTitles(data.title, null).length && !NEW.dupAck) {
     NEW.dupAck = true; btn.textContent = "그래도 저장";
     toast("비슷한 제목의 글이 이미 있어요. 확인하고 한 번 더 누르면 저장돼요.");
@@ -768,12 +807,14 @@ async function createPost(request) {
   const files = NEW.files.length && S.assets ? NEW.files : [];
   const now = new Date().toISOString();
   try {
-    await ref.set({ ...data, photos: [], stage: request ? "memo" : "idea", questions: "", draftNaver: "", draftTistory: "", naverDone: false, naverDoneAt: "", tistoryDone: false, tistoryDoneAt: "", createdAt: now, updatedAt: now });
+    await ref.set({ ...data, photos: [], placeShots: [], noPlace: !!NEW.noPlace, stage: request ? "memo" : "idea", questions: "", draftNaver: "", draftTistory: "", naverDone: false, naverDoneAt: "", tistoryDone: false, tistoryDoneAt: "", createdAt: now, updatedAt: now });
     document.getElementById("newSection").hidden = true;
     S.filter = "todo"; S.cat = "all"; S.open = ref.id; syncSegs();
     toast(request ? "메모를 저장하고 다듬기를 요청했어요." : "메모를 저장했어요.");
   } catch (e) { toast(dbErr(e)); btn.disabled = false; return; }
   btn.disabled = false;
+  const place = NEW.place.length && S.assets ? NEW.place : [];
+  if (place.length) await uploadInto(ref.id, place, "placeShots");
   if (files.length) await uploadInto(ref.id, files);
 }
 
