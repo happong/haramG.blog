@@ -1,0 +1,83 @@
+name: Blog alerts
+
+on:
+  schedule:
+    - cron: "47 23 * * *"   # 매일 08:47 KST — 시즌 글 마감 알림
+    - cron: "41 23 * * 0"   # 매주 월요일 08:41 KST — 주간 발행 체크
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "실행할 작업"
+        type: choice
+        options: [season, weekly, both]
+        default: both
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_REPO: ${{ github.repository }}
+  ALERT_DAYS: "14"
+
+jobs:
+  season:
+    if: github.event.schedule == '47 23 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode != 'weekly')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ensure label
+        run: gh label create season-alert --color D93F0B --description "시즌 글 마감 알림" --force
+      - name: Create or update season issues
+        run: |
+          python scripts/backlog.py alerts --days "$ALERT_DAYS" > alerts.json
+          jq -c '.[]' alerts.json | while read -r item; do
+            title="[시즌 알림] $(jq -r .title <<<"$item")"
+            left=$(jq -r .days_left <<<"$item")
+            body=$(jq -r '"시즌 마감이 다가오는 글이 아직 발행되지 않았습니다.\n\n- 파일: `\(.path)`\n- 상태: \(.status)\n- 시즌 마감: \(.season_end) (D-\(.days_left))\n- 발행 예정일: \(.planned // "미정")\n\n발행 후 frontmatter의 `status: published`, `published: 날짜`를 채우면 다음 날 이 이슈가 자동으로 닫힙니다."' <<<"$item")
+            number=$(gh issue list --label season-alert --state open --limit 200 --json number,title |
+              jq -r --arg t "$title" '.[] | select(.title == $t) | .number' | head -n1)
+            if [ -z "$number" ]; then
+              gh issue create --title "$title" --label season-alert --body "$body" </dev/null
+            elif [ "$left" -lt 0 ]; then
+              gh issue comment "$number" --body "⚠️ 시즌 마감이 $(( -left ))일 지났습니다. 발행할지, 내년 시즌으로 미룰지 정해주세요." </dev/null
+            elif [[ " 7 3 1 0 " == *" $left "* ]]; then
+              gh issue comment "$number" --body "⏰ D-$left 입니다. 아직 발행 전이에요." </dev/null
+            fi
+          done
+      - name: Close issues for published or removed posts
+        run: |
+          gh issue list --label season-alert --state open --limit 200 --json number,title | jq -c '.[]' |
+          while read -r issue; do
+            title=$(jq -r .title <<<"$issue")
+            if ! jq -e --arg t "$title" 'any(.[]; "[시즌 알림] " + .title == $t)' alerts.json >/dev/null; then
+              gh issue close "$(jq -r .number <<<"$issue")" --comment "발행 완료(또는 알림 대상 아님)로 확인되어 닫습니다." </dev/null
+            fi
+          done
+
+  weekly:
+    if: github.event.schedule == '41 23 * * 0' || (github.event_name == 'workflow_dispatch' && inputs.mode != 'season')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ensure label
+        run: gh label create weekly-report --color 0E8A16 --description "주간 발행 체크" --force
+      - name: Post weekly report
+        run: |
+          python scripts/backlog.py status > report.md
+          title=$(head -n1 report.md | sed 's/^# //')
+          gh issue list --label weekly-report --state open --limit 50 --json number,title |
+            jq -r --arg t "$title" '.[] | select(.title != $t) | .number' |
+            xargs -r -I{} gh issue close {} --comment "새 주간 체크 이슈가 생성되어 닫습니다."
+          exists=$(gh issue list --label weekly-report --state open --limit 50 --json title |
+            jq -r --arg t "$title" '.[] | select(.title == $t) | .title')
+          if [ -z "$exists" ]; then
+            gh issue create --title "$title" --label weekly-report --body-file report.md
+          fi
