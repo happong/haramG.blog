@@ -46,6 +46,8 @@ def render(doc_id: str, doc: dict) -> str:
         "season_end": doc.get("seasonEnd", ""),
         "priority": doc.get("priority", 3),
         "photos": len(doc.get("photos") or []),
+        "place_shots": len(doc.get("placeShots") or []),
+        "no_place": str(bool(doc.get("noPlace"))).lower(),
     }
     lines = ["---"] + [f"{k}: {one_line(v)}" for k, v in meta.items()] + ["---", ""]
     sections = [
