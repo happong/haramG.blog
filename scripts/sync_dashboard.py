@@ -51,6 +51,7 @@ def render(doc_id: str, doc: dict) -> str:
     sections = [
         ("경험 메모", doc.get("memo")),
         ("Claude 질문", doc.get("questions")),
+        ("사진 배치 안내", doc.get("photoNotes")),
         ("네이버 초안", doc.get("draftNaver")),
         ("티스토리 초안", doc.get("draftTistory")),
     ]
