@@ -494,6 +494,16 @@ function copyRich(html, text, node) {
   } catch { fallback(); }
 }
 
+async function markNotDup(aId, bId) {
+  const a = S.posts.find(x => x.id === aId), b = S.posts.find(x => x.id === bId);
+  if (!a || !b) return;
+  try {
+    await S.db.collection("posts").doc(aId).update({ dupOk: [...new Set([...(a.dupOk || []), bId])] });
+    await S.db.collection("posts").doc(bId).update({ dupOk: [...new Set([...(b.dupOk || []), aId])] });
+    toast("다른 글로 표시했어요. 이 둘은 더 이상 중복 경고가 뜨지 않아요.");
+  } catch (e) { toast(dbErr(e)); }
+}
+
 // ---------- 초안 렌더링 (티스토리용 마크다운) ----------
 function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function inl(t) { return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"); }
@@ -532,7 +542,7 @@ function splitDraft(text) {
 }
 
 // ---------- 중복 제목 확인 ----------
-const GENERIC = new Set("솔직후기 솔직 후기 후기기 후기기기 내돈내산 추천 맛집 다녀온후기 다녀온 방문 방문후기 feat 이해하기 코스 초보자 축제 여행 주말 가을 동탄 판교 용인 인천 해운대 종로 서현역 나주 담양 목동 호수공원 공부 하기 사람만 있는 이상 완벽한 보낸 시작하는 으로 에서 하는".split(" "));
+const GENERIC = new Set("솔직후기 솔직 후기 후기기 후기기기 내돈내산 추천 맛집 다녀온후기 다녀온 방문 방문후기 feat 이해하기 코스 초보자 축제 여행 주말 가을 동탄 판교 용인 인천 해운대 종로 서현역 나주 담양 목동 호수공원 공부 하기 사람만 있는 이상 완벽한 보낸 시작하는 으로 에서 하는 산척점 산척동 판교점 판교역점 목동점 직영점 동탄직영점 두번째방문 세번째방문".split(" "));
 const GENERIC_BY_LEN = [...GENERIC].sort((a, b) => b.length - a.length);
 const normT = t => String(t || "").toLowerCase().replace(/[^0-9a-z가-힣]/g, "");
 const tokensT = t => String(t || "").toLowerCase().replace(/\([^)]+\)/g, " ").split(/[^0-9a-z가-힣]+/).filter(w => w.length >= 2 && !GENERIC.has(w) && !/^\d+번$/.test(w));
@@ -543,6 +553,8 @@ function similarTitles(title, exceptId) {
   const A = bigr(coreT(title)), na = normT(title), ta = tokensT(title), hits = [];
   for (const p of S.posts) {
     if (p.id === exceptId || !p.title) continue;
+    const me = exceptId ? S.posts.find(x => x.id === exceptId) : null;
+    if ((me?.dupOk || []).includes(p.id) || (p.dupOk || []).includes(exceptId)) continue;
     const B = bigr(coreT(p.title)); let inter = 0; A.forEach(x => { if (B.has(x)) inter++; });
     const dice = A.size && B.size ? 2 * inter / (A.size + B.size) : 0;
     const nb = normT(p.title);
@@ -556,7 +568,9 @@ function dupBox(title, exceptId) {
   if (!hits.length) return null;
   return el("div", { class: "dupbox", role: "status" },
     el("b", { text: "비슷한 제목의 글이 이미 있어요" }),
-    el("ul", {}, hits.slice(0, 5).map(h => el("li", { text: `${h.p.title} · ${STAGE[stageOf(h.p)]}${h.kw.length ? ` (겹치는 말: ${h.kw.join(", ")})` : ""}` }))),
+    el("ul", {}, hits.slice(0, 5).map(h => el("li", {},
+      `${h.p.title} · ${STAGE[stageOf(h.p)]}${h.kw.length ? ` (겹치는 말: ${h.kw.join(", ")})` : ""} `,
+      exceptId ? el("button", { type: "button", class: "btn small", onclick: () => markNotDup(exceptId, h.p.id) }, "다른 글이에요") : null))),
     el("span", { class: "muted", text: "일부러 같은 주제로 쓰는 거라면 그대로 저장해도 돼요." }));
 }
 
