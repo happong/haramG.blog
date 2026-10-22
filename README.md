@@ -112,7 +112,7 @@ python3 scripts/backlog.py alerts --days 14  # 시즌 알림 대상
 ## 다음 할 일
 
 - [x] 기존 네이버 글 5편 전달 → 말투 가이드 작성 (`guides/style-guide.md`)
-- [x] 공부 언어 확인: 파이썬 (if문 → for문 발행, 다음 편 break/continue)
+- [x] 공부 언어 확인: 파이썬 (if문 → for문 발행 → break/continue → while 순서로 초안 작성)
 - [x] 대시보드 + 작성 프롬프트 구성
 - [ ] break/continue 공부 메모를 대시보드에 올리기 → 네이버형 / 티스토리형 2편 작성
 - [ ] 티스토리 계정 개설
