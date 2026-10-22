@@ -134,7 +134,7 @@ n = int(input("숫자: "))
 ValueError: invalid literal for int() with base 10: '열'
 ```
 
-`int()`는 숫자 모양의 문자열만 바꿀 수 있어요. 이런 입력까지 처리하는 방법(예외 처리)은 나중에 따로 정리해볼게요.
+`int()`는 숫자 모양의 문자열만 바꿀 수 있어요.
 
 ## 요약
 
@@ -145,7 +145,7 @@ ValueError: invalid literal for int() with base 10: '열'
 | 실수 입력받기 | `x = float(input("안내: "))` |
 | 여러 정수 한 줄에 | `a, b = map(int, input().split())` |
 
-`input()` + `int()` 조합은 앞으로 if문, for문 예제에서도 계속 쓰이니까 꼭 익혀두세요!
+`input()` + `int()` 조합은 자주 쓰이니까 꼭 익혀두세요!
 
 직접 실행해보다가 막히는 부분이 있으면 댓글로 알려주세요!
 
