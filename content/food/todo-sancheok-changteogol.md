@@ -2,8 +2,8 @@
 title: 동탄 산척점 창터골 추어탕
 dashboard_id: todo-sancheok-changteogol
 category: food
-status: idea
-stage: memo
+status: draft
+stage: draft
 visited: 2026-10-09
 planned: 
 published: 
